@@ -21,8 +21,7 @@ class EncoderBlock(nn.Module):
 
 
 class DecoderBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, input_padding=0,
-                 kernel_size=7, stride=1, padding=3, outlayer=False):
+    def __init__(self, in_channels, out_channels, input_padding=0, kernel_size=7, stride=1, padding=3):
         super(DecoderBlock, self).__init__()
         self.block = nn.Sequential(
             nn.Upsample(scale_factor=2, mode='nearest'),
@@ -39,7 +38,7 @@ class DecoderBlock(nn.Module):
 
 
 class ConvolutionalAutoencoder(nn.Module):
-    def __init__(self, input_channels=1, hidden=32, channels=[16, 32, 64]):
+    def __init__(self, input_channels=1, hidden=32, channels=(16, 32, 64)):
         super(ConvolutionalAutoencoder, self).__init__()
         self.input_channels = input_channels
         self.channels = [input_channels] + channels
@@ -70,18 +69,18 @@ class ConvolutionalAutoencoder(nn.Module):
         for i in reversed(range(1, len(self.channels) - 1)):
             self.decoder.append(DecoderBlock(self.channels[i + 1], self.channels[i]))
         self.decoder.append(DecoderBlock(self.channels[i], self.channels[i]))
-        self.decoder_out = nn.Sequential(
-            nn.ConvTranspose1d(in_channels=self.channels[i],
-                               out_channels=input_channels,
-                               kernel_size=1, stride=1,
-                               padding=0),
+        self.decoder_out = nn.ConvTranspose1d(
+            in_channels=self.channels[i],
+            out_channels=input_channels,
+            kernel_size=1, stride=1,
+            padding=0,
         )
 
     def forward(self, x):
-        x = self.encoder(x)
-        x = self.encoder_out(x)
-        y = self.decoder_in(x)
-        y = self.decoder(y)
-        y = self.decoder_out(y)
-
+        # Initial Tensor Shape:    (..,   1, 900)
+        x = self.encoder(x)      # (.., 128,   3)
+        x = self.encoder_out(x)  # (..,  32,   3)
+        y = self.decoder_in(x)   # (.., 128,   3)
+        y = self.decoder(y)      # (..,  16, 768)
+        y = self.decoder_out(y)  # (..,   1, 768)
         return y
